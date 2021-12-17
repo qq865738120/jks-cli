@@ -1,0 +1,13 @@
+{
+	"extends": "@sindresorhus/tsconfig",
+	"compilerOptions": {
+		"module": "CommonJS",
+		"jsx": "react",
+		"esModuleInterop": true,
+		"outDir": "dist"
+	},
+	"baseUrl": ".",
+	"types": [
+		"./global.d.ts"
+	]
+}
