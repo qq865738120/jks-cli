@@ -73,7 +73,7 @@ $ jks-cli stop --job 4635,jenkins-job-1 --job 3347,jenkins-job-2
 
 ## 效果展示
 ```bash
-# 设置您的通知
+# 设置
 $ jks-cli set
 ```
 <img src="assets/preview-1.png" width="600">
