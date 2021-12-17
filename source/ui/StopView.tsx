@@ -43,6 +43,10 @@ const StopView: FC<IStopView> = ({ cli, jobs, symbol }) => {
 					type: "error",
 					message: "请先设置用户信息，使用 jks-cli set 命令。",
 				})
+				setTimeout(() => {
+					process.exit(1)
+				}, 0)
+				return
 			}
 
 			const jobsSet = new Set(jobs)

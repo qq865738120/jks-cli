@@ -53,7 +53,15 @@ const RunView: FC<IRunView> = ({ quick }) => {
 						}
 					})
 				)
-				setSetup(0)
+				if ((setting.list || []).length === 0) {
+					setTips({
+						isShow: true,
+						type: "error",
+						message: "您还没有设置快捷方式，请使用jks-cli set命令新增一些快捷方式。",
+					})
+				} else {
+					setSetup(0)
+				}
 			}
 		}
 	}, [setting])

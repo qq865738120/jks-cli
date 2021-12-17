@@ -47,6 +47,20 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 
 	useEffect(() => {
 		if (setting) {
+			if (setting.userInfo) {
+				jenkins = jenkinsapi.init(setting.userInfo)
+			} else {
+				setTips({
+					isShow: true,
+					type: "error",
+					message: "请先设置用户信息，使用 jks-cli set 命令。",
+				})
+				setTimeout(() => {
+					process.exit(1)
+				}, 0)
+				return
+			}
+
 			// console.log("jobs", jobs, symbol)
 			const jobsSet = new Set(jobs)
 			const jobsParams: any = {}
@@ -71,16 +85,6 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 			// console.log("jobsParams", jobsParams)
 			setBuildParams(jobsParams)
 			setTableData(tableData)
-
-			if (setting.userInfo) {
-				jenkins = jenkinsapi.init(setting.userInfo)
-			} else {
-				setTips({
-					isShow: true,
-					type: "error",
-					message: "请先设置用户信息，使用 jks-cli set 命令。",
-				})
-			}
 		}
 	}, [setting])
 
