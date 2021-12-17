@@ -2,7 +2,7 @@
 
 > 用命令行的方式打开Jenkins。
 ---------
-[![npm](https://img.shields.io/npm/dm/ink?logo=npm)](https://npmjs.com/package/jks-cli)
+[![npm](https://img.shields.io/npm/dm/jks-cli?logo=npm)](https://npmjs.com/package/jks-cli)
 
 ## 安装
 
