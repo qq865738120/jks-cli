@@ -1,6 +1,6 @@
 {
 	"name": "jks-cli",
-	"version": "0.0.1-alpha.2",
+	"version": "0.0.1",
 	"description": "用命令行的方式打开Jenkins。",
 	"repository": "qq865738120/jks-cli",
 	"author": {
