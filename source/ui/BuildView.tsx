@@ -95,8 +95,8 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 				const jobNames = Object.keys(buildParams)
 				const actionList = jobNames.map(item => actionBuild(item))
 				const resultArr = await Promise.all(actionList)
-				const buildInfoList = resultArr.map(item =>
-					lastBuildInfo(item as string)
+				const buildInfoList = resultArr.map((item: any) =>
+					lastBuildInfo(item.jobName, item.queueId)
 				)
 				const buildInfoArr = await Promise.all(buildInfoList)
 				buildInfoArr.map((item: any) => {
@@ -108,7 +108,7 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 
 	const actionBuild = (jobName: string) => {
 		return new Promise((resolve, reject) => {
-			jenkins.build_with_params(jobName, buildParams[jobName], (err: any) => {
+			jenkins.build_with_params(jobName, buildParams[jobName], (err: any, data: any) => {
 				if (err) {
 					setTips({
 						isShow: true,
@@ -117,20 +117,20 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 					})
 					reject(err)
 				} else {
-					resolve(jobName)
+					resolve({jobName, queueId: data.queueId})
 				}
 			})
 		})
 	}
 
-	const lastBuildInfo = (jobName: string) => {
+	const lastBuildInfo = (jobName: string, queueId: number) => {
 		return new Promise((resolve, reject) => {
-			setTimeout(() => {
-				jenkins.last_build_info(
-					jobName,
+			const timerId = setInterval(() => {
+				jenkins.queue_item(
+					queueId,
 					{},
 					(err: any, lastBuildInfoData: any) => {
-						// console.log("err", err, lastBuildInfoData)
+						console.log("err", err, lastBuildInfoData)
 						if (err) {
 							setTips({
 								isShow: true,
@@ -138,12 +138,13 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 								message: `[${jobName}]: ${err}`,
 							})
 							reject(err)
+						} else if (lastBuildInfoData.executable && lastBuildInfoData.executable.number) {
+							clearInterval(timerId)
+							resolve({ jobName, buildName: lastBuildInfoData.executable.number })
 						}
-
-						resolve({ jobName, buildName: lastBuildInfoData.number })
 					}
 				)
-			}, 15000)
+			}, 10000)
 		})
 	}
 
@@ -225,7 +226,7 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 					.map(item => (
 						<Loading key={item.job || ""}>
 							{item.job}
-							构建中...
+							{item.buildNumber ? '构建中' : '等待中'}...
 						</Loading>
 					))}
 			</Box>

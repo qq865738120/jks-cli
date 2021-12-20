@@ -87,10 +87,6 @@ $ jks-cli build
 <img src="assets/preview-4.png" width="600">
 
 ## 常见问题
-1. 构建过程中项目状态同步不正确
-
-    > 由于Jenkins API限制，目前是通过查询最近一次构建记录的build_number来同步状态的。在查询build_number时存在一定的延迟导致可能查询到的build_number不是本次构建的任务。
-
 
 ## 功能进展
 - [x] 构建项目功能
