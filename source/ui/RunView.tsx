@@ -89,7 +89,7 @@ const RunView: FC<IRunView> = ({ quick }) => {
 			setTips({
 				isShow: true,
 				type: "error",
-				message: "出错啦",
+				message: "出错啦，请检查快捷方式 command 是否正确",
 			})
 		}
 	}

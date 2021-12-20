@@ -143,7 +143,7 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 						resolve({ jobName, buildName: lastBuildInfoData.number })
 					}
 				)
-			}, 12000)
+			}, 15000)
 		})
 	}
 
