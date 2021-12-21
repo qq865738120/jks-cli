@@ -130,7 +130,7 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 					queueId,
 					{},
 					(err: any, lastBuildInfoData: any) => {
-						console.log("err", err, lastBuildInfoData)
+						// console.log("err", err, lastBuildInfoData)
 						if (err) {
 							setTips({
 								isShow: true,

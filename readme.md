@@ -2,7 +2,12 @@
 
 > 用命令行的方式打开Jenkins。
 ---------
-[![npm](https://img.shields.io/npm/dm/jks-cli?logo=npm)](https://npmjs.com/package/jks-cli)
+[![typescript](https://badgen.net/badge/icon/typescript?icon=typescript&label&labelColor=orange)](https://www.typescriptlang.org/)
+[![npm](https://badgen.net/npm/v/jks-cli?icon=npm&labelColor=pink)](https://npmjs.com/package/jks-cli)
+[![npm](https://badgen.net/npm/dt/jks-cli?icon=npm&labelColor=pink)](https://npmjs.com/package/jks-cli)
+[![](https://badgen.net/github/stars/qq865738120/jks-cli?icon=github&labelColor=black)](https://github.com/qq865738120/jks-cli)
+[![](https://badgen.net/github/issues/qq865738120/jks-cli?icon=github&labelColor=black)](https://github.com/qq865738120/jks-cli/issues)
+[![](https://badgen.net/github/commits/qq865738120/jks-cli?icon=github&labelColor=black)](https://github.com/qq865738120/jks-cli)
 
 ## 安装
 
