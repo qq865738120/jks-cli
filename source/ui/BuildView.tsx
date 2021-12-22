@@ -9,6 +9,7 @@ import Tips, { ITipsProps } from "./components/Tips"
 // import theme from "./common/theme"
 import Logo from "./components/Logo"
 import meow from "meow"
+import dayjs from "dayjs"
 // import * as figures from "figures"
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -22,11 +23,12 @@ export interface IBuildView {
 	cli: meow.Result<meow.AnyFlags>
 	jobs: string[]
 	symbol: string
+	onFinish?: () => any
 }
 
 let jenkins: any = null
 
-const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
+const BuildView: FC<IBuildView> = ({ cli, jobs, symbol, onFinish }) => {
 	// 设置
 	const [setting, setSetting] = useState<{
 		list?: ISetForm[]
@@ -46,6 +48,45 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 	}, [])
 
 	useEffect(() => {
+		init()
+	}, [setting])
+
+	useEffect(() => {
+		init()
+	}, [setting, jobs, symbol])
+
+	useEffect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-extra-semi
+		;(async () => {
+			try {
+				if (buildParams) {
+					const jobNames = Object.keys(buildParams)
+					const actionList = jobNames.map(item => actionBuild(item))
+					const resultArr = await Promise.all(actionList)
+					resultArr.map((item: any) => {
+						lastBuildInfo(item.jobName, item.queueId).then((res: any) => {
+							buildInfo(res.jobName, res.buildName)
+						})
+					})
+					// console.log('buildParams', buildParams);
+				}
+			} catch (error) {
+				console.error(error)
+			}
+		})()
+	}, [buildParams])
+
+	useEffect(() => {
+		if (
+			tableData.filter(item => item.state !== "DOING").length ===
+				tableData.length &&
+			tableData.length > 0
+		) {
+			onFinish && onFinish()
+		}
+	}, [tableData])
+
+	const init = () => {
 		if (setting) {
 			if (setting.userInfo) {
 				jenkins = jenkinsapi.init(setting.userInfo)
@@ -72,7 +113,14 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 						jobsParams[params[2] as string] || {}
 					jobsParams[params[2] as string][params[0] as string] = params[1]
 					if (!tableData.find(item => item.job === params[2])) {
-						tableData.push({ job: params[2], buildNumber: "", state: "DOING" })
+						tableData.push({
+							job: params[2],
+							buildNumber: "",
+							startTime: "",
+							estimatedDuration: "",
+							currentUseTime: "",
+							state: "DOING",
+						})
 					}
 				} else {
 					setTips({
@@ -86,75 +134,16 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 			setBuildParams(jobsParams)
 			setTableData(tableData)
 		}
-	}, [setting])
-
-	useEffect(() => {
-		// eslint-disable-next-line @typescript-eslint/no-extra-semi
-		;(async () => {
-			if (buildParams) {
-				const jobNames = Object.keys(buildParams)
-				const actionList = jobNames.map(item => actionBuild(item))
-				const resultArr = await Promise.all(actionList)
-				const buildInfoList = resultArr.map((item: any) =>
-					lastBuildInfo(item.jobName, item.queueId)
-				)
-				const buildInfoArr = await Promise.all(buildInfoList)
-				buildInfoArr.map((item: any) => {
-					startInterval(item.jobName, item.buildName)
-				})
-			}
-		})()
-	}, [buildParams])
+	}
 
 	const actionBuild = (jobName: string) => {
 		return new Promise((resolve, reject) => {
-			jenkins.build_with_params(jobName, buildParams[jobName], (err: any, data: any) => {
-				if (err) {
-					setTips({
-						isShow: true,
-						type: "error",
-						message: `[${jobName}]: ${err}`,
-					})
-					reject(err)
-				} else {
-					resolve({jobName, queueId: data.queueId})
-				}
-			})
-		})
-	}
+			// console.log(resolve, reject, jobName)
 
-	const lastBuildInfo = (jobName: string, queueId: number) => {
-		return new Promise((resolve, reject) => {
-			const timerId = setInterval(() => {
-				jenkins.queue_item(
-					queueId,
-					{},
-					(err: any, lastBuildInfoData: any) => {
-						// console.log("err", err, lastBuildInfoData)
-						if (err) {
-							setTips({
-								isShow: true,
-								type: "error",
-								message: `[${jobName}]: ${err}`,
-							})
-							reject(err)
-						} else if (lastBuildInfoData.executable && lastBuildInfoData.executable.number) {
-							clearInterval(timerId)
-							resolve({ jobName, buildName: lastBuildInfoData.executable.number })
-						}
-					}
-				)
-			}, 10000)
-		})
-	}
-
-	const buildInfo = (jobName: string, buildNumber: number) => {
-		return new Promise((resolve, reject) => {
-			jenkins.build_info(
+			jenkins.build_with_params(
 				jobName,
-				buildNumber,
-				{},
-				(err: any, buildInfoData: any) => {
+				buildParams[jobName],
+				(err: any, data: any) => {
 					if (err) {
 						setTips({
 							isShow: true,
@@ -162,58 +151,126 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 							message: `[${jobName}]: ${err}`,
 						})
 						reject(err)
+					} else {
+						resolve({ jobName, queueId: data.queueId })
 					}
-
-					// console.log("tableData-----------", jobName, tableData)
-					const currentIndex = tableData.findIndex(item => item.job === jobName)
-					tableData[currentIndex] = {
-						job: jobName,
-						buildNumber: buildInfoData.number,
-						state: buildInfoData.result || "DOING",
-					}
-					setTableData([].concat(tableData as any))
-
-					if (buildInfoData.result !== null) {
-						notifier.notify(
-							{
-								title: "jks-cli 通知",
-								message: `您的项目 ${jobName} ${
-									buildInfoData.result === "SUCCESS"
-										? "构建成功"
-										: buildInfoData.result === "ABORTED"
-										? "取消构建"
-										: "构建失败"
-								}`,
-								icon: path.join(__dirname, "../../assets/icon.jpeg"),
-								sound: true,
-								wait: true,
-							},
-							(error: any) => {
-								if (error) {
-									setTips({
-										isShow: true,
-										type: "error",
-										message: "发送通知出错",
-									})
-									reject(error)
-								}
-							}
-						)
-					}
-
-					resolve(buildInfoData.result)
 				}
 			)
 		})
 	}
 
-	const startInterval = (jobName: string, buildNumber: number) => {
-		setTimeout(async () => {
-			const result = await buildInfo(jobName, buildNumber)
-			if (result === null) {
-				startInterval(jobName, buildNumber)
-			}
-		}, 20000)
+	const lastBuildInfo = (jobName: string, queueId: number) => {
+		return new Promise((resolve, reject) => {
+			const timerId = setInterval(() => {
+				jenkins.queue_item(queueId, {}, (err: any, lastBuildInfoData: any) => {
+					// console.log("err", err, lastBuildInfoData)
+					if (err) {
+						setTips({
+							isShow: true,
+							type: "error",
+							message: `[${jobName}]: ${err}`,
+						})
+						reject(err)
+					} else if (
+						lastBuildInfoData.executable &&
+						lastBuildInfoData.executable.number
+					) {
+						resolve({ jobName, buildName: lastBuildInfoData.executable.number })
+						clearInterval(timerId)
+					}
+				})
+			}, 10000)
+		})
+	}
+
+	const buildInfo = (jobName: string, buildNumber: number) => {
+		return new Promise((resolve, reject) => {
+			const timer = setInterval(() => {
+				jenkins.build_info(
+					jobName,
+					buildNumber,
+					{},
+					(err: any, buildInfoData: any) => {
+						if (err) {
+							setTips({
+								isShow: true,
+								type: "error",
+								message: `[${jobName}]: ${err}`,
+							})
+							reject(err)
+						}
+
+						setTableData((preTableData: any[]) => {
+							const currentIndex = preTableData.findIndex(
+								item => item.job === jobName
+							)
+							preTableData[currentIndex] = {
+								job: jobName,
+								buildNumber: buildInfoData.number,
+								startTime: dayjs(buildInfoData.timestamp).format("HH:mm:ss"),
+								estimatedDuration: (
+									buildInfoData.estimatedDuration /
+									1000 /
+									60
+								).toFixed(2),
+								currentUseTime: (
+									(new Date().getTime() - buildInfoData.timestamp) /
+									1000 /
+									60
+								).toFixed(2),
+								state: buildInfoData.result || "DOING",
+							}
+							return [].concat(preTableData as any)
+						})
+						// console.log(buildInfoData, "buildInfoData")
+
+						if (buildInfoData.result !== null) {
+							doNotify(jobName, buildInfoData.result)
+								.then(() => {
+									resolve(buildInfoData.result)
+									clearInterval(timer)
+								})
+								.catch(err => {
+									reject(err)
+									clearInterval(timer)
+								})
+						}
+					}
+				)
+			}, 20000)
+		})
+	}
+
+	const doNotify = (jobName: string, result: string) => {
+		return new Promise((resolve, reject) => {
+			notifier.notify(
+				{
+					title: "jks-cli 通知",
+					message: `您的项目 ${jobName} ${
+						result === "SUCCESS"
+							? "构建成功"
+							: result === "ABORTED"
+							? "取消构建"
+							: "构建失败"
+					}`,
+					icon: path.join(__dirname, "../../assets/icon.jpeg"),
+					sound: true,
+					wait: true,
+				},
+				(error: any) => {
+					if (error) {
+						setTips({
+							isShow: true,
+							type: "error",
+							message: "发送通知出错",
+						})
+						reject(error)
+					} else {
+						resolve("")
+					}
+				}
+			)
+		})
 	}
 
 	return (
@@ -226,14 +283,24 @@ const BuildView: FC<IBuildView> = ({ cli, jobs, symbol }) => {
 					.map(item => (
 						<Loading key={item.job || ""}>
 							{item.job}
-							{item.buildNumber ? '构建中' : '等待中'}...
+							{item.buildNumber ? "构建中" : "等待中"}...
 						</Loading>
 					))}
 			</Box>
 
-			{/* <Box flexDirection='column' width={80}></Box> */}
 			{(tableData || []).length > 0 && (
-				<MyTable title='构建列表' data={(tableData || []) as any}></MyTable>
+				<MyTable
+					title='构建列表'
+					headerText={[
+						"项目",
+						"构建序列",
+						"开始时间",
+						"预计耗时（分钟）",
+						"已耗时（分钟）",
+						"状态",
+					]}
+					data={(tableData || []) as any}
+				></MyTable>
 			)}
 
 			<Tips {...tips}></Tips>

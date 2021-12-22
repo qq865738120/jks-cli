@@ -280,6 +280,7 @@ const SetView: FC<ISetView> = ({ cli }) => {
 								return {
 									label: item.title,
 									value: index,
+									subLabel: item.remark
 								}
 							})}
 							onConfirm={onSelectSetting}

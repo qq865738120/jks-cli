@@ -25,6 +25,7 @@ export type MyTableProps<T extends ScalarDict> = {
 	 * Columns that we should display in the table.
 	 */
 	columns: (keyof T)[]
+	headerText: (string | keyof T)[]
 	/**
 	 * Cell padding.
 	 */
@@ -58,6 +59,7 @@ export default class MyTable<T extends ScalarDict> extends React.Component<
 			title: this.props.title,
 			data: this.props.data,
 			columns: this.props.columns || this.getDataKeys(),
+			headerText: this.props.headerText || this.getDataKeys(),
 			padding: this.props.padding || 1,
 			header: this.props.header || TableHeader,
 			cell: this.props.cell || TableCell,
@@ -88,10 +90,12 @@ export default class MyTable<T extends ScalarDict> extends React.Component<
 	 * Returns a list of column names and their widths.
 	 */
 	getColumns(): Column<T>[] {
-		const { columns, padding } = this.getConfig()
+		const { columns, padding, headerText } = this.getConfig()
 
-		const widths: Column<T>[] = columns.map(key => {
-			const header = String(key).length
+		const widths: Column<T>[] = columns.map((key, index) => {
+			const cnChar = String(headerText[index]).match(/[^\x00-\x80]/g) || []
+			const header = String(headerText[index]).length + cnChar.length
+
 			/* Get the width of each cell in the column */
 			const data = this.props.data.map(data => {
 				const value = data[key]
@@ -118,10 +122,10 @@ export default class MyTable<T extends ScalarDict> extends React.Component<
 	 * Returns a (data) row representing the headings.
 	 */
 	getHeadings(): Partial<T> {
-		const { columns } = this.getConfig()
+		const { columns, headerText } = this.getConfig()
 
 		const headings: Partial<T> = columns.reduce(
-			(acc, column) => ({ ...acc, [column]: column }),
+			(acc, column, index) => ({ ...acc, [column]: headerText[index] }),
 			{}
 		)
 
@@ -211,32 +215,31 @@ export default class MyTable<T extends ScalarDict> extends React.Component<
 		 * Render the table line by line.
 		 */
 		return (
+			<Box flexDirection='column' minWidth={150}>
+				<Text color={theme.mainColor} bold>
+					{this.props.title}
+				</Text>
+				<Box flexDirection='column'>
+					{/* Header */}
+					{this.header({ key: "header", columns, data: {} })}
+					{this.heading({ key: "heading", columns, data: headings })}
+					{/* Data */}
+					{this.props.data.map((row, index) => {
+						// Calculate the hash of the row based on its value and position
+						const key = `row-${sha1(row)}-${index}`
 
-			<Box flexDirection='column'>
- 			<Text color={theme.mainColor} bold>
- 				{this.props.title}
- 			</Text>
-			 <Box flexDirection='column'>
-				{/* Header */}
-				{this.header({ key: "header", columns, data: {} })}
-				{this.heading({ key: "heading", columns, data: headings })}
-				{/* Data */}
-				{this.props.data.map((row, index) => {
-					// Calculate the hash of the row based on its value and position
-					const key = `row-${sha1(row)}-${index}`
-
-					// Construct a row.
-					return (
-						<Box flexDirection='column' key={key}>
-							{this.separator({ key: `separator-${key}`, columns, data: {} })}
-							{this.data({ key: `data-${key}`, columns, data: row })}
-						</Box>
-					)
-				})}
-				{/* Footer */}
-				{this.footer({ key: "footer", columns, data: {} })}
+						// Construct a row.
+						return (
+							<Box flexDirection='column' key={key}>
+								{this.separator({ key: `separator-${key}`, columns, data: {} })}
+								{this.data({ key: `data-${key}`, columns, data: row })}
+							</Box>
+						)
+					})}
+					{/* Footer */}
+					{this.footer({ key: "footer", columns, data: {} })}
+				</Box>
 			</Box>
- 		</Box>
 		)
 	}
 }
@@ -326,7 +329,11 @@ function row<T extends ScalarDict>(
 
 						// margins
 						const ml = config.padding
-						const mr = column.width - (String(value).length + (String(value).match(/[^\x00-\x80]/g) || [])?.length) - config.padding
+						const mr =
+							column.width -
+							(String(value).length +
+								(String(value).match(/[^\x00-\x80]/g) || [])?.length) -
+							config.padding
 
 						return (
 							/* prettier-ignore */
